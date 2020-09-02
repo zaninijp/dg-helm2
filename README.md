@@ -1,1 +1,1 @@
-# dg-helm2
+helm install dg-helm2
