@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pingdatagov
+  labels:
+    app: pingdatagov
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingdatagov
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: pingdatagov
+    spec:
+      containers:
+      - env:
+        - name: PING_IDENTITY_ACCEPT_EULA
+          valueFrom:
+            configMapKeyRef:
+              key: PING_IDENTITY_ACCEPT_EULA
+              name: env-vars
+        - name: SERVER_PROFILE_PATH
+          value: pingdatagovernance
+        - name: SERVER_PROFILE_URL
+          value: https://github.com/cprice-ping/Profile-Consent-Demo.git
+        - name: USER_BASE_DN
+          valueFrom:
+            configMapKeyRef:
+              key: USER_BASE_DN
+              name: env-vars
+        image: pingidentity/pingdatagovernance:edge
+        imagePullPolicy: "Always"
+        name: pingdatagov
+        ports:
+        - containerPort: 443
+        - containerPort: 636
+        resources: {}
+        volumeMounts:
+        envFrom:
+          - secretRef:
+              name: devops-secret
+      restartPolicy: Always
+      serviceAccountName: ""
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: pingdatagov-pap
+  name: pingdatagov-pap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingdatagov-pap
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: pingdatagov-pap
+    spec:
+      containers:
+      - env:
+        - name: PING_IDENTITY_ACCEPT_EULA
+          valueFrom:
+            configMapKeyRef:
+              key: PING_IDENTITY_ACCEPT_EULA
+              name: env-vars
+        - name: SERVER_PROFILE_PATH
+          value: pingdatagovernance-pap
+        - name: SERVER_PROFILE_URL
+          value: https://github.com/cprice-ping/Profile-Consent-Demo.git
+        - name: HTTPS_PORT
+          value: "1443"
+        image: pingidentity/pingdatagovernancepap:edge
+        imagePullPolicy: Always
+        name: pingdatagov-pap
+        ports:
+        - containerPort: 1443
+        resources: {}
+        envFrom:
+          - secretRef:
+              name: devops-secret
+      restartPolicy: Always
+      serviceAccountName: ""
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pingdatagov-pap
+  name: pingdatagov-pap
+spec:
+  ports:
+  - name: "443"
+    port: 443
+    targetPort: 1443
+  selector:
+    app: pingdatagov-pap
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pingdatagov
+  name: pingdatagov
+spec:
+  ports:
+  - name: "443"
+    port: 443
+    targetPort: 443
+  - name: "636"
+    port: 636
+    targetPort: 636
+  selector:
+    app: pingdatagov
+status:
+  loadBalancer: {}
